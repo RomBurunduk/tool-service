@@ -11,6 +11,17 @@ servers:
 
 components:
   schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Текст ошибки
+      example:
+        error: описание причины отказа
+
     WordStatResult:
       type: object
       properties:
@@ -29,6 +40,31 @@ components:
                 type: string
                 description: The share of the number of such queries from the total number of queries to Yandex.
 
+  responses:
+    ErrorBadRequest:
+      description: Некорректный запрос (например, пустой или отсутствующий query)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ErrorNotFound:
+      description: Устройство или цена не найдены
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ErrorInternalServerError:
+      description: Внутренняя ошибка сервера
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ErrorBadGateway:
+      description: Ошибка при обращении к внешнему сервису или некорректный ответ upstream
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
 
 paths:
   /region:
@@ -45,6 +81,8 @@ paths:
                   region:
                     type: string
                     example: г. Москва
+        '500':
+          $ref: '#/components/responses/ErrorInternalServerError'
 
   /wordstat:
     get:
@@ -61,6 +99,10 @@ paths:
                     $ref: '#/components/schemas/WordStatResult'
                   new:
                     $ref: '#/components/schemas/WordStatResult'
+        '400':
+          $ref: '#/components/responses/ErrorBadRequest'
+        '502':
+          $ref: '#/components/responses/ErrorBadGateway'
 
   /phone-prices:
     get:
@@ -83,6 +125,12 @@ paths:
                     type: number
                     example: 649.9
                     description: Цена телефона в долларах на релизе
+        '400':
+          $ref: '#/components/responses/ErrorBadRequest'
+        '404':
+          $ref: '#/components/responses/ErrorNotFound'
+        '500':
+          $ref: '#/components/responses/ErrorInternalServerError'
 
   /currency:
     get:
@@ -104,5 +152,7 @@ paths:
                   USD:
                     type: number
                     example: 75.09961
+        '502':
+          $ref: '#/components/responses/ErrorBadGateway'
 
 
