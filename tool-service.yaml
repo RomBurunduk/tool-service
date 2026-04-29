@@ -66,14 +66,11 @@ paths:
     get:
       description: Цены устройств на релизе
       parameters:
-        - name: brand
+        - name: query
           in: query
-          description: Бренд телефона
-          example: Apple
-        - name: model
-          in: query
-          description: Модель телефона
-          example: iPhone 11 Pro Max A2218 Global Dual SIM TD-LTE 512GB
+          required: true
+          description: Название телефона
+          example: iPhone 12 Pro
       responses:
         '200':
           description: OK

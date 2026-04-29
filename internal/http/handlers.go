@@ -52,12 +52,11 @@ func (h *Handlers) WordStat(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) PhonePrices(w http.ResponseWriter, r *http.Request) {
-	brand := r.URL.Query().Get("brand")
-	model := r.URL.Query().Get("model")
-	out, err := h.PhoneSvc.PriceByBrandModel(r.Context(), brand, model)
+	q := r.URL.Query().Get("query")
+	out, err := h.PhoneSvc.PriceByQuery(r.Context(), q)
 	if err != nil {
 		switch {
-		case errors.Is(err, phone.ErrMissingParams):
+		case errors.Is(err, phone.ErrQueryRequired):
 			writeJSON(w, http.StatusBadRequest, errJSON{Error: err.Error()})
 		case errors.Is(err, phone.ErrNotFound), errors.Is(err, phone.ErrNoPrice):
 			writeJSON(w, http.StatusNotFound, errJSON{Error: err.Error()})

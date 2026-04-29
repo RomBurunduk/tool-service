@@ -11,6 +11,11 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// matchScoreThreshold is the minimum combined pg_trgm score to accept a match.
+// We use GREATEST(similarity, word_similarity both ways) so queries without a
+// brand (e.g. "iPhone 12 Pro") still align with catalog rows "Apple iPhone 12 Pro …".
+const matchScoreThreshold = 0.3
+
 type Repository struct {
 	db *sqlx.DB
 }
@@ -19,27 +24,44 @@ func New(db *sqlx.DB) *Repository {
 	return &Repository{db: db}
 }
 
-func (r *Repository) GetByBrandModel(ctx context.Context, brand, modelName string) (*model.Phone, error) {
+func (r *Repository) GetBestMatchByQuery(ctx context.Context, query string) (*model.Phone, error) {
 	const q = `
-		SELECT id, brand, model, price, payload
+		SELECT id, brand, model, price, payload,
+			GREATEST(
+				similarity(
+					lower(trim(brand) || ' ' || trim(model)),
+					lower(trim($1::text))
+				),
+				word_similarity(
+					lower(trim($1::text)),
+					lower(trim(brand) || ' ' || trim(model))
+				),
+				word_similarity(
+					lower(trim(brand) || ' ' || trim(model)),
+					lower(trim($1::text))
+				)
+			) AS match_sim
 		FROM phones
-		WHERE brand = $1 AND model = $2
-		ORDER BY id
+		ORDER BY match_sim DESC NULLS LAST
 		LIMIT 1
 	`
 	var row struct {
-		ID      int64           `db:"id"`
-		Brand   string          `db:"brand"`
-		Model   string          `db:"model"`
-		Price   sql.NullFloat64 `db:"price"`
-		Payload []byte          `db:"payload"`
+		ID       int64           `db:"id"`
+		Brand    string          `db:"brand"`
+		Model    string          `db:"model"`
+		Price    sql.NullFloat64 `db:"price"`
+		Payload  []byte          `db:"payload"`
+		MatchSim float64         `db:"match_sim"`
 	}
-	err := r.db.GetContext(ctx, &row, q, brand, modelName)
+	err := r.db.GetContext(ctx, &row, q, query)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("get phone: %w", err)
+		return nil, fmt.Errorf("get phone by query: %w", err)
+	}
+	if row.MatchSim < matchScoreThreshold {
+		return nil, nil
 	}
 	p := &model.Phone{
 		ID:      row.ID,

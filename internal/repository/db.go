@@ -26,6 +26,8 @@ func Migrate(ctx context.Context, db *sqlx.DB) error {
 			payload JSONB NOT NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS phones_brand_model_idx ON phones (brand, model)`,
+		`CREATE EXTENSION IF NOT EXISTS pg_trgm`,
+		`CREATE INDEX IF NOT EXISTS phones_fullname_trgm_idx ON phones USING gin ((lower(trim(brand) || ' ' || trim(model))) gin_trgm_ops)`,
 		`CREATE TABLE IF NOT EXISTS tool_calls (
 			id BIGSERIAL PRIMARY KEY,
 			request_id UUID NOT NULL,

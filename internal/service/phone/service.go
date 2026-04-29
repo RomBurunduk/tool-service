@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"tool-service/internal/model"
@@ -12,7 +13,7 @@ import (
 )
 
 var (
-	ErrMissingParams = errors.New("brand and model are required")
+	ErrQueryRequired = errors.New("query is required")
 	ErrNotFound      = errors.New("phone not found")
 	ErrNoPrice       = errors.New("price not available for this phone")
 )
@@ -26,9 +27,10 @@ func New(repo *phonerepo.Repository, tl *toollogsvc.Service) *Service {
 	return &Service{repo: repo, tl: tl}
 }
 
-func (s *Service) PriceByBrandModel(ctx context.Context, brand, modelName string) (out model.PhonePriceResponse, err error) {
+func (s *Service) PriceByQuery(ctx context.Context, query string) (out model.PhonePriceResponse, err error) {
 	start := time.Now()
-	input, _ := json.Marshal(map[string]string{"brand": brand, "model": modelName})
+	q := strings.TrimSpace(query)
+	input, _ := json.Marshal(map[string]string{"query": q})
 	defer func() {
 		if s.tl == nil {
 			return
@@ -36,10 +38,10 @@ func (s *Service) PriceByBrandModel(ctx context.Context, brand, modelName string
 		s.tl.Record(ctx, "phone-prices", input, out, err, start)
 	}()
 
-	if brand == "" || modelName == "" {
-		return model.PhonePriceResponse{}, ErrMissingParams
+	if q == "" {
+		return model.PhonePriceResponse{}, ErrQueryRequired
 	}
-	p, err := s.repo.GetByBrandModel(ctx, brand, modelName)
+	p, err := s.repo.GetBestMatchByQuery(ctx, q)
 	if err != nil {
 		return model.PhonePriceResponse{}, err
 	}
