@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: tool
+      POSTGRES_PASSWORD: tool
+      POSTGRES_DB: tool
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tool -d tool"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8081:8081"
+    environment:
+      DATABASE_URL: postgres://tool:tool@postgres:5432/tool?sslmode=disable
+      HTTP_ADDR: ":8081"
+      WORDSTAT_API_KEY: ${WORDSTAT_API_KEY}
+      WORDSTAT_FOLDER_ID: ${WORDSTAT_FOLDER_ID}
+      WORDSTAT_BASE_URL: ${WORDSTAT_BASE_URL:-https://searchapi.api.cloud.yandex.net}
+      WORDSTAT_PATH: ${WORDSTAT_PATH:-/v2/wordstat/dynamics}
+      CURRENCY_API_KEY: ${CURRENCY_API_KEY}
+      CURRENCY_API_URL: ${CURRENCY_API_URL:-https://api.currencyapi.com/v3/latest?base_currency=RUB&currencies=EUR,USD,CNY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  importer:
+    build: .
+    entrypoint: ["/usr/local/bin/importer"]
+    environment:
+      DATABASE_URL: postgres://tool:tool@postgres:5432/tool?sslmode=disable
+      CSV_PATH: /data/mobile.csv
+    volumes:
+      - ./mobile.csv:/data/mobile.csv:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - import
+
+volumes:
+  pgdata:

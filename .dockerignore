@@ -1,0 +1,4 @@
+.git
+.cursor
+**/*_test.go
+k8s

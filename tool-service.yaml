@@ -1,0 +1,111 @@
+# yaml-language-server: $schema=https://spec.openapis.org/oas/3.0/schema/2021-09-28
+openapi: 3.0.0
+info:
+  title: Tool Service
+  description: Tool Service
+  version: 1.0.0
+servers:
+  - url: 'http://localhost:8081/tools/api'
+
+
+
+components:
+  schemas:
+    WordStatResult:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                description: The date
+              count:
+                type: integer
+                description: Number of queries containing the given keyword
+              share:
+                type: string
+                description: The share of the number of such queries from the total number of queries to Yandex.
+
+
+paths:
+  /region:
+    get:
+      summary: Регион пользователя
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  region:
+                    type: string
+                    example: г. Москва
+
+  /wordstat:
+    get:
+      summary: Динамика спроса на новую и БУ модель техники
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  used:
+                    $ref: '#/components/schemas/WordStatResult'
+                  new:
+                    $ref: '#/components/schemas/WordStatResult'
+
+  /phone-prices:
+    get:
+      description: Цены устройств на релизе
+      parameters:
+        - name: brand
+          in: query
+          description: Бренд телефона
+          example: Apple
+        - name: model
+          in: query
+          description: Модель телефона
+          example: iPhone 11 Pro Max A2218 Global Dual SIM TD-LTE 512GB
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  price:
+                    type: number
+                    example: 649.9
+                    description: Цена телефона в долларах на релизе
+
+  /currency:
+    get:
+      description: Курс рубля к EUR,USD,CNY
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  CNY:
+                    type: number
+                    example: 10.99876
+                  EUR:
+                    type: number
+                    example: 87.90930
+                  USD:
+                    type: number
+                    example: 75.09961
+
+
